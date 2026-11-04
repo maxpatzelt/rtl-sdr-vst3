@@ -80,6 +80,7 @@ secrets/
 
 # Local assistant and container configuration, unrelated to the plugin
 /chat-frank*.ps1
+/chat-with-frank.ps1
 /frank*.ps1
 /daemon.json
 /docker-compose-ollama.yml
