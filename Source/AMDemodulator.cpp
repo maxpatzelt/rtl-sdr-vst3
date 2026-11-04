@@ -20,8 +20,9 @@ void AMDemodulator::setSampleRate(double rate)
 
 float AMDemodulator::iqToFloat(uint8_t val) const
 {
-    // Convert uint8 (0-255) to float (-1.0 to +1.0)
-    return (static_cast<float>(val) - 127.5f) / 127.5f;
+    // Convert uint8 (0-255) to float (-1.0 to +1.0) - optimized
+    constexpr float scale = 1.0f / 127.5f;
+    return (static_cast<float>(val) - 127.5f) * scale;
 }
 
 float AMDemodulator::calculateEnvelope(float I, float Q)

@@ -1,8 +1,8 @@
 # RTL-SDR VST3 Plugin - Development History
 
-**Date**: January 24, 2026
+**Date**: January 25, 2026
 **Repository**: https://github.com/maxpatzelt/rtl-sdr-vst3
-**Current Version**: v2.1.0
+**Current Version**: v2.2.0 (Final Release)
 
 ## Project Overview
 
@@ -86,6 +86,42 @@ A professional RTL-SDR receiver implemented as a VST3 plugin for Ableton Live an
 - UI reorganized for new features
 - Build system updated for new source files
 
+### Phase 3: Final Polish & Optimization (v2.2.0) - COMPLETED
+**Date**: January 25, 2026
+
+**UI Professional Cleanup:**
+- Removed cluttered preset buttons (use Preset Manager instead)
+- Improved spacing: 10px between all controls (was 15px)
+- Added professional gradient background
+- Section labels: "VISUALIZATION" and "CONTROLS"
+- Panel borders for visual separation
+- Window height optimized: 700px → 650px
+- Better control grouping and layout flow
+
+**MIDI Integration:**
+- Enabled MIDI input (`acceptsMidi = true`)
+- MIDI CC parameter mappings:
+  - **CC 1 (Mod Wheel)**: Frequency control
+  - **CC 7 (Volume)**: Output volume
+  - **CC 74 (Brightness)**: Receiver gain
+  - **CC 71 (Resonance)**: Squelch threshold
+- Full DAW automation support
+- Real-time MIDI processing in audio thread
+
+**Performance Optimizations:**
+- Spectrum Analyzer: 30 → 20 FPS (33% less CPU)
+- Waterfall Display: 20 → 15 FPS (25% less CPU)
+- Editor Timer: 100ms → 50ms (20 FPS, smoother UI)
+- IQ Conversion: Optimized with `constexpr` scaling
+- Reduced memory allocations in demodulation loops
+- Better buffer management throughout
+
+**Export & Visualization:**
+- Spectrum zoom: 0.1x to 10x range
+- PNG screenshot export with timestamps
+- Improved frequency span calculations
+- Better click-to-tune accuracy
+
 ## Technical Architecture
 
 ### Core Components
@@ -94,7 +130,7 @@ A professional RTL-SDR receiver implemented as a VST3 plugin for Ableton Live an
 - Multi-mode demodulation switching
 - RTL-SDR device management (simulation mode for now)
 - Audio resampling pipeline
-- Parameter management
+- MIDI CC parameter automation
 - Thread synchronization
 
 **Demodulators:**

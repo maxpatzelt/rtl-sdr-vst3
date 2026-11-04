@@ -67,3 +67,19 @@ test_results/
 *.prof
 *.gcda
 *.gcno
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local assistant and container configuration, unrelated to the plugin
+/chat-frank*.ps1
+/frank*.ps1
+/daemon.json
+/docker-compose-ollama.yml

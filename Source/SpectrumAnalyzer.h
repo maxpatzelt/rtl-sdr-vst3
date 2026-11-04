@@ -34,6 +34,12 @@ public:
     // Set sample rate
     void setSampleRate(double sr) { sampleRate = sr; }
 
+    // Set zoom level (1.0 = full span, 0.5 = half span, 2.0 = double span)
+    void setZoomLevel(float zoom) { zoomLevel = juce::jlimit(0.1f, 10.0f, zoom); }
+
+    // Export current spectrum view as image
+    void exportScreenshot(const juce::File& outputFile);
+
     // Set callback for frequency changes (click-to-tune)
     std::function<void(double)> onFrequencyClicked;
 
@@ -47,6 +53,7 @@ private:
 
     double centerFrequency = 100.0;  // MHz
     double sampleRate = 1024000.0;   // Hz
+    float zoomLevel = 1.0f;          // Zoom multiplier for frequency span
 
     int writePosition = 0;
     bool needsUpdate = false;

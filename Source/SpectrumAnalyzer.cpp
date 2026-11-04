@@ -13,7 +13,7 @@ SpectrumAnalyzer::SpectrumAnalyzer()
     magnitudes.fill(minDb);
     smoothedMags.fill(minDb);
 
-    startTimerHz(30);  // 30 FPS refresh
+    startTimerHz(20);  // 20 FPS refresh (optimized)
 }
 
 SpectrumAnalyzer::~SpectrumAnalyzer()
@@ -51,8 +51,9 @@ void SpectrumAnalyzer::pushSamples(const uint8_t* iqData, int numSamples)
 
 float SpectrumAnalyzer::iqToFloat(uint8_t val) const
 {
-    // Convert uint8 (0-255) to float (-1.0 to +1.0)
-    return (static_cast<float>(val) - 127.5f) / 127.5f;
+    // Convert uint8 (0-255) to float (-1.0 to +1.0) - optimized
+    constexpr float scale = 1.0f / 127.5f;
+    return (static_cast<float>(val) - 127.5f) * scale;
 }
 
 void SpectrumAnalyzer::performFFT()
@@ -111,7 +112,7 @@ void SpectrumAnalyzer::paint(juce::Graphics& g)
     g.setColour(juce::Colours::grey);
     g.setFont(10.0f);
 
-    double span = sampleRate / 1e6;  // MHz
+    double span = (sampleRate / 1e6) / zoomLevel;  // MHz (apply zoom)
     double startFreq = centerFrequency - span / 2.0;
     double endFreq = centerFrequency + span / 2.0;
 
@@ -180,7 +181,7 @@ void SpectrumAnalyzer::mouseDown(const juce::MouseEvent& event)
 
     // Convert pixel position to frequency
     // relativeX: 0.0 = left edge, 0.5 = center, 1.0 = right edge
-    double span = sampleRate / 1e6;  // MHz
+    double span = (sampleRate / 1e6) / zoomLevel;  // MHz (apply zoom)
     double clickedFreq = centerFrequency + (relativeX - 0.5) * span;
 
     // Clamp to valid range
@@ -188,4 +189,22 @@ void SpectrumAnalyzer::mouseDown(const juce::MouseEvent& event)
 
     // Notify callback
     onFrequencyClicked(clickedFreq);
+}
+
+void SpectrumAnalyzer::exportScreenshot(const juce::File& outputFile)
+{
+    // Create an image of the current display
+    juce::Image screenshot(juce::Image::RGB, getWidth(), getHeight(), true);
+    juce::Graphics g(screenshot);
+
+    // Render the spectrum analyzer to the image
+    paint(g);
+
+    // Save as PNG
+    juce::FileOutputStream stream(outputFile);
+    if (stream.openedOk())
+    {
+        juce::PNGImageFormat pngWriter;
+        pngWriter.writeImageToStream(screenshot, stream);
+    }
 }

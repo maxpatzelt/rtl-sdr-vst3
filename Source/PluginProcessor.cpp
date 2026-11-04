@@ -30,6 +30,16 @@ RTLSDRPluginProcessor::RTLSDRPluginProcessor()
         juce::ParameterID{"volume", 1}, "Volume",
         juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f),
         0.7f));
+
+    addParameter(fineTuneParam = new juce::AudioParameterFloat(
+        juce::ParameterID{"finetune", 1}, "Fine Tune",
+        juce::NormalisableRange<float>(-10000.0f, 10000.0f, 10.0f),
+        0.0f));
+
+    addParameter(squelchParam = new juce::AudioParameterFloat(
+        juce::ParameterID{"squelch", 1}, "Squelch",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f),
+        0.0f));
 }
 
 RTLSDRPluginProcessor::~RTLSDRPluginProcessor()
@@ -44,7 +54,7 @@ const juce::String RTLSDRPluginProcessor::getName() const
 
 bool RTLSDRPluginProcessor::acceptsMidi() const
 {
-    return false;
+    return true;  // Enable MIDI for CC control
 }
 
 bool RTLSDRPluginProcessor::producesMidi() const
@@ -121,7 +131,30 @@ bool RTLSDRPluginProcessor::isBusesLayoutSupported(const BusesLayout& layouts) c
 
 void RTLSDRPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    juce::ignoreUnused(midiMessages);
+    // Process MIDI CC messages for parameter control
+    for (const auto metadata : midiMessages)
+    {
+        auto message = metadata.getMessage();
+        if (message.isController())
+        {
+            int ccNumber = message.getControllerNumber();
+            float ccValue = message.getControllerValue() / 127.0f;
+
+            // MIDI CC mappings (standard):
+            // CC 1 (Mod Wheel) = Frequency
+            // CC 7 (Volume) = Volume
+            // CC 74 (Brightness) = Gain
+            // CC 71 (Resonance) = Squelch
+            if (ccNumber == 1 && frequencyParam)  // Frequency
+                frequencyParam->setValueNotifyingHost(ccValue);
+            else if (ccNumber == 7 && volumeParam)  // Volume
+                volumeParam->setValueNotifyingHost(ccValue);
+            else if (ccNumber == 74 && gainParam)  // Gain
+                gainParam->setValueNotifyingHost(ccValue);
+            else if (ccNumber == 71 && squelchParam)  // Squelch
+                squelchParam->setValueNotifyingHost(ccValue);
+        }
+    }
 
     juce::ScopedNoDenormals noDenormals;
 
@@ -174,15 +207,29 @@ void RTLSDRPluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         else if (mode == 3)  // USB mode
         {
             ssbDemod.setMode(SSBDemodulator::USB);
+            if (fineTuneParam)
+                ssbDemod.setFineTuneOffset(fineTuneParam->get());
             ssbDemod.processBlock(tempIQBuffer.data(), (int)toRead, tempAudioBuffer);
         }
         else if (mode == 4)  // LSB mode
         {
             ssbDemod.setMode(SSBDemodulator::LSB);
+            if (fineTuneParam)
+                ssbDemod.setFineTuneOffset(fineTuneParam->get());
             ssbDemod.processBlock(tempIQBuffer.data(), (int)toRead, tempAudioBuffer);
         }
         else  // FM modes (0 = Wideband, 1 = Narrowband)
         {
+            // Set bandwidth based on mode
+            if (mode == 0)
+                fmDemod.setBandwidth(150000.0f);  // Wideband FM: 150 kHz
+            else if (mode == 1)
+                fmDemod.setBandwidth(12500.0f);   // Narrowband FM: 12.5 kHz (NOAA weather)
+
+            // Set squelch threshold
+            if (squelchParam)
+                fmDemod.setSquelch(squelchParam->get());
+
             fmDemod.processIQ(tempIQBuffer.data(), (int)toRead, tempAudioBuffer);
         }
 

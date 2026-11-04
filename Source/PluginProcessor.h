@@ -63,6 +63,8 @@ public:
     juce::AudioParameterFloat* gainParam = nullptr;
     juce::AudioParameterChoice* modeParam = nullptr;
     juce::AudioParameterFloat* volumeParam = nullptr;
+    juce::AudioParameterFloat* fineTuneParam = nullptr;
+    juce::AudioParameterFloat* squelchParam = nullptr;
 
 private:
     // SDR components

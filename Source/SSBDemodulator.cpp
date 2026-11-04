@@ -23,7 +23,9 @@ void SSBDemodulator::setSampleRate(double rate)
 
 float SSBDemodulator::iqToFloat(uint8_t val) const
 {
-    return (static_cast<float>(val) - 127.5f) / 127.5f;
+    // Optimized conversion
+    constexpr float scale = 1.0f / 127.5f;
+    return (static_cast<float>(val) - 127.5f) * scale;
 }
 
 void SSBDemodulator::initializeHilbertFilter()

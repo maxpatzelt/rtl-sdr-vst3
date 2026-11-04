@@ -16,7 +16,7 @@ WaterfallDisplay::WaterfallDisplay()
 
     waterfallImage = juce::Image(juce::Image::RGB, fftSize / 2, historyLines, true);
 
-    startTimerHz(20);  // 20 FPS refresh
+    startTimerHz(15);  // 15 FPS refresh (optimized)
 }
 
 WaterfallDisplay::~WaterfallDisplay()

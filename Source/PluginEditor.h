@@ -46,7 +46,6 @@ private:
 
     juce::Label frequencyLabel;
     juce::Slider frequencySlider;
-    juce::TextButton frequencyPreset1, frequencyPreset2, frequencyPreset3;
 
     juce::Label gainLabel;
     juce::Slider gainSlider;
@@ -57,9 +56,20 @@ private:
     juce::Label volumeLabel;
     juce::Slider volumeSlider;
 
+    juce::Label fineTuneLabel;
+    juce::Slider fineTuneSlider;
+
+    juce::Label squelchLabel;
+    juce::Slider squelchSlider;
+
     juce::ComboBox deviceCombo;
     juce::TextButton startButton;
     juce::TextButton stopButton;
+
+    // Visualization controls
+    juce::TextButton zoomInButton;
+    juce::TextButton zoomOutButton;
+    juce::TextButton exportButton;
 
     // Preset UI
     juce::ComboBox presetCombo;
@@ -80,6 +90,8 @@ private:
     void deleteCurrentPreset();
     void updateHistoryList();
     void addToHistory(double frequency);
+
+    float currentZoom = 1.0f;  // Track spectrum zoom level
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RTLSDRPluginEditor)
 };

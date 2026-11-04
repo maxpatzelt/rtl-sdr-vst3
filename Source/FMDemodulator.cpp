@@ -48,6 +48,11 @@ void FMDemodulator::setDeemphasis(float timeConstantUs)
     deemphasisAlpha = 1.0f / (1.0f + rc * (float)audioRate);
 }
 
+void FMDemodulator::setSquelch(float threshold)
+{
+    squelchThreshold = threshold;
+}
+
 void FMDemodulator::reset()
 {
     prevIQ = std::complex<float>(1.0f, 0.0f);
@@ -67,13 +72,17 @@ void FMDemodulator::reset()
 void FMDemodulator::iqToComplex(const uint8_t* iq, int numSamples, std::vector<std::complex<float>>& out)
 {
     // RTL-SDR gives uint8 IQ pairs centered at 127
-    // Convert to float complex centered at 0
-    out.resize(numSamples / 2);
+    // Convert to float complex centered at 0 (optimized)
+    int complexSamples = numSamples / 2;
+    out.resize(complexSamples);
 
-    for (int i = 0; i < numSamples / 2; i++)
+    // Optimized conversion
+    constexpr float scale = 1.0f / 128.0f;
+    for (int i = 0; i < complexSamples; ++i)
     {
-        float I = (iq[i * 2] - 127.0f) / 128.0f;
-        float Q = (iq[i * 2 + 1] - 127.0f) / 128.0f;
+        int idx = i * 2;
+        float I = (static_cast<float>(iq[idx]) - 127.5f) * scale;
+        float Q = (static_cast<float>(iq[idx + 1]) - 127.5f) * scale;
         out[i] = std::complex<float>(I, Q);
     }
 }
@@ -86,9 +95,15 @@ void FMDemodulator::demodulate(const std::vector<std::complex<float>>& iq, std::
     // This is the classic approach from rtl_fm
     // demod = angle(conj(prev) * current)
 
+    float sumMagnitude = 0.0f;
+
     for (size_t i = 0; i < iq.size(); i++)
     {
         std::complex<float> current = iq[i];
+
+        // Track signal level for squelch
+        float magnitude = std::abs(current);
+        sumMagnitude += magnitude;
 
         // Multiply by conjugate of previous sample
         std::complex<float> diff = std::conj(prevIQ) * current;
@@ -98,6 +113,19 @@ void FMDemodulator::demodulate(const std::vector<std::complex<float>>& iq, std::
 
         audio[i] = angle;
         prevIQ = current;
+    }
+
+    // Update signal level (exponential moving average)
+    if (!iq.empty())
+    {
+        float avgMagnitude = sumMagnitude / iq.size();
+        signalLevel = signalLevel * (1.0f - signalLevelAlpha) + avgMagnitude * signalLevelAlpha;
+    }
+
+    // Apply squelch: mute if signal level below threshold
+    if (squelchThreshold > 0.0f && signalLevel < squelchThreshold)
+    {
+        std::fill(audio.begin(), audio.end(), 0.0f);
     }
 }
 

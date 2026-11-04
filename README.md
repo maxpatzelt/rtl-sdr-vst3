@@ -8,25 +8,31 @@ A professional-grade VST3 plugin that bridges RTL-SDR USB radio dongles to Ablet
 
 ### Core SDR Features
 - **Real-time RF to Audio**: Stream radio signals directly into Ableton Live
-- **Wideband FM Demodulation**: High-quality FM demodulation with de-emphasis filtering
+- **Multi-Mode Demodulation**: FM (Wide/Narrow), AM, SSB (USB/LSB)
 - **Frequency Range**: 24 MHz to 1.76 GHz (RTL-SDR hardware dependent)
-- **Tunable Parameters**: Frequency, gain, mode, and volume controls
-- **Low Latency**: Optimized for real-time audio performance
+- **MIDI Control**: Full MIDI CC support for DAW automation
+- **Low Latency**: Optimized for real-time audio performance (< 100ms)
 
 ### Professional Visualizations
-- **FFT Spectrum Analyzer**: Real-time 1024-point FFT frequency display with smoothing
-- **Waterfall Display**: Time-domain spectrum visualization with color-mapped signal intensity
-- **S-Meter**: Professional signal strength meter showing dBm and S-units
-- **Modern Dark Theme**: 800x700 UI with visualization panel optimized for studio use
+- **FFT Spectrum Analyzer**: Real-time 1024-point FFT with zoom (0.1x-10x)
+- **Waterfall Display**: Time-domain spectrum with color-mapped intensity
+- **S-Meter**: Professional signal strength (dBm and S-units)
+- **Click-to-Tune**: Interactive spectrum for instant frequency selection
+- **Screenshot Export**: Save spectrum views as PNG images
 
-### Preset Management
-- **Save/Load Presets**: Store favorite stations with frequency, gain, and mode settings
-- **Default Preset Library**:
-  - FM radio stations
-  - Aviation frequencies (tower, ground, approach, ATIS)
-  - NOAA weather radio channels
-  - Amateur radio calling frequencies (2M, 70cm)
-  - Shortwave time stations (WWV)
+### Advanced Controls
+- **Fine Tuning**: ±10 kHz adjustment for SSB precision
+- **Squelch**: Noise gate for FM modes (0.0-1.0)
+- **Frequency History**: 20-entry recent frequency memory
+- **Preset Manager**: Save/load station configurations
+- **Zoom Controls**: Spectrum analyzer frequency span adjustment
+
+### MIDI Integration
+- **CC 1 (Mod Wheel)**: Frequency control
+- **CC 7 (Volume)**: Output volume
+- **CC 74 (Brightness)**: Receiver gain
+- **CC 71 (Resonance)**: Squelch threshold
+- Full parameter automation support in any DAW
 
 ## 🏗️ Architecture
 
@@ -118,11 +124,10 @@ VST3 Audio Output → Ableton Live
 ### 1. Clone and Setup
 
 ```bash
-git clone <your-repo-url> RTL-SDR-VST
+git clone --recurse-submodules https://github.com/maxpatzelt/rtl-sdr-vst3.git RTL-SDR-VST
 cd RTL-SDR-VST
 
-# Clone JUCE as a submodule
-git submodule add https://github.com/juce-framework/JUCE.git JUCE
+# Initialize JUCE if this repository was cloned without submodules
 git submodule update --init --recursive
 ```
 
@@ -275,7 +280,8 @@ Potential features for future development:
 
 ## 📄 License
 
-This project is open source. Specify your license here (e.g., MIT, GPL, Apache 2.0).
+This project is released under the MIT License; see [LICENSE](LICENSE). JUCE
+and librtlsdr are third-party dependencies and retain their own license terms.
 
 ### Third-Party Licenses
 - **JUCE**: GPL v3 / Commercial (https://juce.com/juce-7-licence/)

@@ -31,6 +31,7 @@ public:
     void setAudioSampleRate(double audioRate);
     void setBandwidth(float bandwidthHz); // Channel bandwidth
     void setDeemphasis(float timeConstantUs); // 50 or 75 microseconds
+    void setSquelch(float threshold); // 0.0 to 1.0 (0 = off)
 
     // Process IQ samples (uint8 format from RTL-SDR)
     // Returns demodulated audio samples
@@ -53,6 +54,11 @@ private:
     double sdrRate = 1024000.0;
     double audioRate = 48000.0;
     float bandwidth = 150000.0f; // 150 kHz for wideband FM
+
+    // Squelch
+    float squelchThreshold = 0.0f;
+    float signalLevel = 0.0f;
+    float signalLevelAlpha = 0.1f;
 
     // De-emphasis filter state (simple first-order IIR)
     float deemphasisAlpha = 0.0f;

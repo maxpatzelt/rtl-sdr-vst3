@@ -9,7 +9,7 @@
 RTLSDRPluginEditor::RTLSDRPluginEditor(RTLSDRPluginProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    setSize(800, 700);
+    setSize(800, 650);
 
     // Add visualization components
     addAndMakeVisible(spectrumAnalyzer);
@@ -46,18 +46,7 @@ RTLSDRPluginEditor::RTLSDRPluginEditor(RTLSDRPluginProcessor& p)
     };
     addAndMakeVisible(frequencySlider);
 
-    // Frequency presets
-    frequencyPreset1.setButtonText("FM: 98.7 MHz");
-    frequencyPreset1.onClick = [this]() { frequencySlider.setValue(98.7); };
-    addAndMakeVisible(frequencyPreset1);
-
-    frequencyPreset2.setButtonText("Aviation: 121.5 MHz");
-    frequencyPreset2.onClick = [this]() { frequencySlider.setValue(121.5); };
-    addAndMakeVisible(frequencyPreset2);
-
-    frequencyPreset3.setButtonText("Weather: 162.5 MHz");
-    frequencyPreset3.onClick = [this]() { frequencySlider.setValue(162.5); };
-    addAndMakeVisible(frequencyPreset3);
+    // Frequency presets removed - use preset manager instead
 
     // Gain
     gainLabel.setText("Gain (dB):", juce::dontSendNotification);
@@ -102,6 +91,34 @@ RTLSDRPluginEditor::RTLSDRPluginEditor(RTLSDRPluginProcessor& p)
             audioProcessor.volumeParam->setValueNotifyingHost(volumeSlider.getValue());
     };
     addAndMakeVisible(volumeSlider);
+
+    // Fine tune (for SSB)
+    fineTuneLabel.setText("Fine Tune (Hz):", juce::dontSendNotification);
+    addAndMakeVisible(fineTuneLabel);
+
+    fineTuneSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    fineTuneSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 80, 20);
+    fineTuneSlider.setRange(-10000.0, 10000.0, 10.0);
+    fineTuneSlider.setValue(audioProcessor.fineTuneParam ? audioProcessor.fineTuneParam->get() : 0.0);
+    fineTuneSlider.onValueChange = [this]() {
+        if (audioProcessor.fineTuneParam)
+            audioProcessor.fineTuneParam->setValueNotifyingHost((fineTuneSlider.getValue() + 10000.0f) / 20000.0f);
+    };
+    addAndMakeVisible(fineTuneSlider);
+
+    // Squelch (for FM)
+    squelchLabel.setText("Squelch:", juce::dontSendNotification);
+    addAndMakeVisible(squelchLabel);
+
+    squelchSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    squelchSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    squelchSlider.setRange(0.0, 1.0, 0.01);
+    squelchSlider.setValue(audioProcessor.squelchParam ? audioProcessor.squelchParam->get() : 0.0);
+    squelchSlider.onValueChange = [this]() {
+        if (audioProcessor.squelchParam)
+            audioProcessor.squelchParam->setValueNotifyingHost(squelchSlider.getValue());
+    };
+    addAndMakeVisible(squelchSlider);
 
     // Device selection
     deviceCombo.addItem("No devices", 1);
@@ -170,12 +187,40 @@ RTLSDRPluginEditor::RTLSDRPluginEditor(RTLSDRPluginProcessor& p)
         addToHistory(freq);
     };
 
+    // Visualization controls
+    zoomInButton.setButtonText("Zoom +");
+    zoomInButton.onClick = [this]() {
+        currentZoom *= 1.5f;
+        currentZoom = juce::jlimit(0.1f, 10.0f, currentZoom);
+        spectrumAnalyzer.setZoomLevel(currentZoom);
+    };
+    addAndMakeVisible(zoomInButton);
+
+    zoomOutButton.setButtonText("Zoom -");
+    zoomOutButton.onClick = [this]() {
+        currentZoom /= 1.5f;
+        currentZoom = juce::jlimit(0.1f, 10.0f, currentZoom);
+        spectrumAnalyzer.setZoomLevel(currentZoom);
+    };
+    addAndMakeVisible(zoomOutButton);
+
+    exportButton.setButtonText("Export");
+    exportButton.onClick = [this]() {
+        juce::File desktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
+        juce::File outputFile = desktop.getChildFile("spectrum_" + juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S") + ".png");
+        spectrumAnalyzer.exportScreenshot(outputFile);
+        juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
+            "Export Complete", "Spectrum saved to: " + outputFile.getFullPathName());
+    };
+    addAndMakeVisible(exportButton);
+
     // Update device and preset lists
     updateDeviceList();
     updatePresetList();
+    updateHistoryList();
 
-    // Start timer for status updates
-    startTimer(100);
+    // Start timer for status updates (20 FPS, optimized)
+    startTimer(50);
 }
 
 RTLSDRPluginEditor::~RTLSDRPluginEditor()
@@ -185,13 +230,29 @@ RTLSDRPluginEditor::~RTLSDRPluginEditor()
 
 void RTLSDRPluginEditor::paint(juce::Graphics& g)
 {
-    // Modern dark theme
-    g.fillAll(juce::Colour(0xFF1a1a1a));
+    // Professional dark theme with gradients
+    juce::ColourGradient bgGradient(
+        juce::Colour(0xFF1a1a1a), 0.0f, 0.0f,
+        juce::Colour(0xFF0f0f0f), 0.0f, (float)getHeight(),
+        false);
+    g.setGradientFill(bgGradient);
+    g.fillAll();
 
-    // Background panels
+    // Background panels with subtle borders
     g.setColour(juce::Colour(0xFF2a2a2a));
     g.fillRoundedRectangle(10, 50, getWidth() - 20, 280, 5.0f);  // Visualization panel
-    g.fillRoundedRectangle(10, 340, getWidth() - 20, 350, 5.0f);  // Controls panel
+    g.fillRoundedRectangle(10, 340, getWidth() - 20, 295, 5.0f);  // Controls panel
+
+    // Panel borders
+    g.setColour(juce::Colour(0xFF3a3a3a));
+    g.drawRoundedRectangle(10, 50, getWidth() - 20, 280, 5.0f, 1.0f);
+    g.drawRoundedRectangle(10, 340, getWidth() - 20, 295, 5.0f, 1.0f);
+
+    // Section labels
+    g.setColour(juce::Colours::lightgrey);
+    g.setFont(10.0f);
+    g.drawText("VISUALIZATION", 20, 55, 100, 12, juce::Justification::left);
+    g.drawText("CONTROLS", 20, 345, 100, 12, juce::Justification::left);
 }
 
 void RTLSDRPluginEditor::resized()
@@ -205,6 +266,15 @@ void RTLSDRPluginEditor::resized()
 
     // Spectrum analyzer (top third)
     spectrumAnalyzer.setBounds(bounds.removeFromTop(120).reduced(5));
+
+    // Visualization controls (below spectrum)
+    auto vizControlRow = bounds.removeFromTop(25);
+    vizControlRow = vizControlRow.reduced(5);
+    zoomInButton.setBounds(vizControlRow.removeFromRight(60));
+    vizControlRow.removeFromRight(5);
+    zoomOutButton.setBounds(vizControlRow.removeFromRight(60));
+    vizControlRow.removeFromRight(5);
+    exportButton.setBounds(vizControlRow.removeFromRight(60));
 
     bounds.removeFromTop(5);
 
@@ -251,31 +321,46 @@ void RTLSDRPluginEditor::resized()
     frequencyLabel.setBounds(bounds.removeFromTop(20));
     frequencySlider.setBounds(bounds.removeFromTop(30));
 
-    auto presetBtnRow = bounds.removeFromTop(30);
-    frequencyPreset1.setBounds(presetBtnRow.removeFromLeft(180));
-    presetBtnRow.removeFromLeft(5);
-    frequencyPreset2.setBounds(presetBtnRow.removeFromLeft(180));
-    presetBtnRow.removeFromLeft(5);
-    frequencyPreset3.setBounds(presetBtnRow.removeFromLeft(180));
-
-    bounds.removeFromTop(15);
+    bounds.removeFromTop(10);
 
     // Gain
     gainLabel.setBounds(bounds.removeFromTop(20));
     gainSlider.setBounds(bounds.removeFromTop(30));
 
-    bounds.removeFromTop(15);
+    bounds.removeFromTop(10);
 
     // Mode
     auto modeRow = bounds.removeFromTop(30);
     modeLabel.setBounds(modeRow.removeFromLeft(100));
     modeCombo.setBounds(modeRow.removeFromLeft(200));
 
-    bounds.removeFromTop(15);
+    bounds.removeFromTop(10);
 
     // Volume
     volumeLabel.setBounds(bounds.removeFromTop(20));
     volumeSlider.setBounds(bounds.removeFromTop(30));
+
+    bounds.removeFromTop(10);
+
+    // Fine tune (for SSB)
+    fineTuneLabel.setBounds(bounds.removeFromTop(20));
+    fineTuneSlider.setBounds(bounds.removeFromTop(30));
+
+    bounds.removeFromTop(10);
+
+    // Squelch (for FM)
+    squelchLabel.setBounds(bounds.removeFromTop(20));
+    squelchSlider.setBounds(bounds.removeFromTop(30));
+
+    bounds.removeFromTop(10);
+
+    // History combo
+    auto historyRow = bounds.removeFromTop(30);
+    juce::Label* historyLabel = new juce::Label();
+    historyLabel->setText("History:", juce::dontSendNotification);
+    historyLabel->setBounds(historyRow.removeFromLeft(80));
+    addAndMakeVisible(historyLabel);
+    historyCombo.setBounds(historyRow.removeFromLeft(400));
 }
 
 void RTLSDRPluginEditor::timerCallback()
@@ -339,6 +424,14 @@ void RTLSDRPluginEditor::updateStatus()
         // Update volume
         if (audioProcessor.volumeParam)
             volumeSlider.setValue(audioProcessor.volumeParam->get(), juce::dontSendNotification);
+
+        // Update fine tune
+        if (audioProcessor.fineTuneParam)
+            fineTuneSlider.setValue(audioProcessor.fineTuneParam->get(), juce::dontSendNotification);
+
+        // Update squelch
+        if (audioProcessor.squelchParam)
+            squelchSlider.setValue(audioProcessor.squelchParam->get(), juce::dontSendNotification);
     }
 }
 
